@@ -1,0 +1,13 @@
+FROM python:3
+MAINTAINER <dlovitch@gmail.com>
+RUN mkdir -p /srv/app/
+
+WORKDIR /srv/app/
+COPY README.rst /srv/app/
+COPY requirements.txt /srv/app/
+COPY setup.py /srv/app/
+COPY tcmodemstats/ /srv/app/tcmodemstats
+RUN pip install --no-cache-dir .[datadog]
+
+WORKDIR /srv/app/tcmodemstats/
+CMD [ "python", "./modemstatsforwarder.py" ]

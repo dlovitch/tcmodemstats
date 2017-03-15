@@ -9,7 +9,7 @@ requires = [
     'lxml>=3.7.2',
     'python-dateutil>=2.6.0',
     'pytz>=2016.10',
-    'PyYAML>=3.12'
+    'PyYAML>=3.12',
     'requests>=2.13.0',
     ]
 
