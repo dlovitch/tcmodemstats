@@ -13,6 +13,8 @@ requires = [
     'requests>=2.13.0',
     ]
 
+test_requirements = ['pytest>=3.0.7']
+
 setup(
     name='tcmodemstats',
     version='1.0.0',
@@ -22,6 +24,7 @@ setup(
     url='https://github.com/dlovitch/tcmodemstats/',
     packages=find_packages(),
     install_requires=requires,
+    tests_require=test_requirements,
     extras_require={
         'influxdb': ['influxdb>=4.0.0'],
         'datadog': ['datadog>=0.15.0'],
