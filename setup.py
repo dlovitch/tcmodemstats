@@ -26,4 +26,10 @@ setup(
         'influxdb': ['influxdb>=4.0.0'],
         'datadog': ['datadog>=0.15.0'],
     },
+    entry_points={
+        'console_scripts': [
+            "tcmodemstatsforwarder=tcmodemstats.cli_forwarder:main",
+        ],
+    },
+
 )

@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #stats_destination = "influxdb"
@@ -10,18 +9,18 @@ if stats_destination == "datadog":
     import datadog
 
 import datetime
+import logging
 import time
 
-import config
-import logging
-import modemstats
+from .config import Config
+from .modemstats import ModemStats
 
 #log_level = logging.INFO
 log_level  = logging.DEBUG
 
 class ModemStatsForwarder(object):
     def __init__(self):
-        self.config = config.Config()
+        self.config = Config()
         self.configure_logger()
 
     def configure_logger(self):
@@ -38,7 +37,7 @@ class ModemStatsForwarder(object):
         exit(message)
 
     def get_modem_stats(self):
-        self.modem_stats = modemstats.ModemStats(
+        self.modem_stats = ModemStats(
             host=self.config.tcmodem_host,
             username=self.config.tcmodem_username,
             password=self.config.tcmodem_password
@@ -133,11 +132,3 @@ class ModemStatsForwarder(object):
             self.send_to_datadog()
         else:
             self.log_and_exit("Unknown stats destination.")
-
-
-
-if __name__ == "__main__":
-    forwarder = ModemStatsForwarder()
-    while True:
-        forwarder.main()
-        time.sleep(10)

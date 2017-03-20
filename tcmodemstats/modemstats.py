@@ -2,9 +2,9 @@
 
 import re
 
-import scraper
-import downstream
-import upstream
+from . import scraper
+from . import downstream
+from . import upstream
 
 class ModemStats(object):
     def __init__(self, host, username, password, scraper_verbosity=0):
