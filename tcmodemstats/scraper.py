@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# TODO: convert print statements to logging
-
-import requests
 import bs4
+import logging
+import requests
 
 class Scraper(object):
-    def __init__(self, verbose, host, username, password):
-        self.verbose = verbose
+    def __init__(self, host, username, password):
+        self.logger = logging.getLogger("tcmodemstats")
+        #print("got here")
+        #exit(1)
         self.host = host
         self.username = username
         self.password = password
@@ -33,15 +34,15 @@ class Scraper(object):
             data = []
             range_start = 0
         headers = [td.text for td in table[0].findAll("td")]
-        if self.verbose >= 2: print("process_table/headers: {}".format(headers))
+        self.logger.debug("scraper/process_table/headers: {}".format(headers))
         for tr in table[1:]:
             if tr.findAll("td"):
                 row = [td.text for td in tr.findAll("td")]
-                if self.verbose >= 2: print("process_table/row: {}".format(row))
+                self.logger.debug("scraper/process_table/row: {}".format(row))
                 processed_row = {}
                 for i in range(range_start, len(headers)):
                     processed_row[headers[i]] = row[i]
-                if self.verbose >= 2: print("process_table/processed_row: {}".format(processed_row))
+                self.logger.debug("scraper/process_table/processed_row: {}".format(processed_row))
                 if unique_key:
                     data[row[0]] = processed_row
                 else:
@@ -59,6 +60,13 @@ class Scraper(object):
     def login(self):
         login = {"loginUsername": self.username, "loginPassword": self.password}
         r = requests.post("http://{}/goform/home_loggedout".format(self.host), data=login)
+        if "<!-- $Id: at_a_glance.asp" not in r.text: # login was not successful
+            if "<!-- $Id: home_loggedout.php" in r.text:
+                raise ValueError("Username or password not correct")
+            else:
+                raise ValueError("Unknown error while attempting to login")
+        return r.status_code
+
 
     def get_vendor_network(self):
         status = {}

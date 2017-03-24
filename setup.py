@@ -31,6 +31,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            "tcmodemstatscli=tcmodemstats.cli:main",
             "tcmodemstatsforwarder=tcmodemstats.cli_forwarder:main",
         ],
     },

@@ -3,6 +3,8 @@
 #stats_destination = "influxdb"
 stats_destination = "datadog"
 
+MAX_SEND_ERROR_COUNT = 10
+
 if stats_destination == "influxdb":
     from influxdb import InfluxDBClient
 if stats_destination == "datadog":
@@ -12,41 +14,61 @@ import datetime
 import logging
 import time
 
-from .config import Config
-from .modemstats import ModemStats
-
-#log_level = logging.INFO
-log_level  = logging.DEBUG
+from . import config
+from . import logger
+from . import modemstats
 
 class ModemStatsForwarder(object):
     def __init__(self):
-        self.config = Config()
-        self.configure_logger()
+        self.config = config.Config()
 
-    def configure_logger(self):
-        self.logger = logging.getLogger(__name__)
-        console_logger = logging.StreamHandler()
-        self.logger.setLevel(log_level)
-        console_logger.setLevel(log_level)
-        formatter = logging.Formatter("%(asctime)s//%(levelname)s//%(name)s//%(message)s")
-        console_logger.setFormatter(formatter)
-        self.logger.addHandler(console_logger)
+        # Configure logging
+        if self.config.tcmodemstats_log_level:
+            self.logger_base = logger.Logger(self.config.tcmodemstats_log_level)
+        else:
+            self.logger_base = logger.Logger()
+        self.logger = logging.getLogger("tcmodemstats")
+
+        if (self.config.tcmodem_host is None
+            or self.config.tcmodem_username is None
+            or self.config.tcmodem_password is None
+            or self.config.tcmodem_name is None):
+            self.log_and_exit("Missing a required tcmodem configuration setting")
+
+        if (self.config.stats_destination is None):
+            self.log_and_exit("Missing stats_destination configuration setting.")
+
+        # Initialize ModemStats
+        if self.config.tcmodemstats_log_level:
+            self.modem_stats = modemstats.ModemStats(
+                host=self.config.tcmodem_host,
+                username=self.config.tcmodem_username,
+                password=self.config.tcmodem_password,
+                log_level=self.config.tcmodemstats_log_level
+            )
+        else:
+            self.modem_stats = modemstats.ModemStats(
+                host=self.config.tcmodem_host,
+                username=self.config.tcmodem_username,
+                password=self.config.tcmodem_password
+            )
+
+        self.send_error_count = 0
 
     def log_and_exit(self, message):
         self.logger.critical(message)
         exit(message)
 
     def get_modem_stats(self):
-        self.modem_stats = ModemStats(
-            host=self.config.tcmodem_host,
-            username=self.config.tcmodem_username,
-            password=self.config.tcmodem_password
-            )
-
+        self.modem_stats.get_stats()
 
     def send_to_influxdb(self):
         # WIP
         return
+
+        if (self.config.influxdb_host is None
+            or self.config.influxdb_dbname is None):
+            self.log_and_exit("Missing a required influxdb configuration setting.")
 
         influxdb_port = 8086
 
@@ -106,23 +128,18 @@ class ModemStatsForwarder(object):
             metrics.append({"metric": "cablemodem.upstream.symbol_rate", "points": (now, stream.symbol_rate), "host": self.config.tcmodem_name, "tags": ["index:{}".format(stream.index)]})
         self.logger.debug(metrics)
         self.logger.debug("Sending metrics to Datadog.")
-        datadog.api.Metric.send(metrics)
+        try:
+            datadog.api.Metric.send(metrics)
+            self.send_error_count -= 1 # if there were no errors, decrement the error count
+        except datadog.api.exceptions.HTTPError as e:
+            self.send_error_count += 1
+            self.logger.info("Error sending to Datadog ({}). Details: {}".format(self.send_error_count, e))
+        if self.send_error_count > MAX_SEND_ERROR_COUNT:
+            self.log_and_exit("Too many errors, exiting")
+
         self.logger.info("Metrics sent to Datadog.")
 
     def main(self):
-
-        if (self.config.tcmodem_host is None
-            or self.config.tcmodem_username is None
-            or self.config.tcmodem_password is None
-            or self.config.tcmodem_name is None):
-            self.log_and_exit("Missing a required tcmodem configuration setting")
-
-        if (self.config.stats_destination is None):
-            self.log_and_exit("Missing stats_destination configuration setting.")
-            
-        if (self.config.influxdb_host is None
-            or self.config.influxdb_dbname is None):
-            self.log_and_exit("Missing a required influxdb configuration setting.")
 
         self.get_modem_stats()
 
@@ -132,3 +149,8 @@ class ModemStatsForwarder(object):
             self.send_to_datadog()
         else:
             self.log_and_exit("Unknown stats destination.")
+
+    def timer(self, interval=10):
+        while True:
+            self.main()
+            time.sleep(10)

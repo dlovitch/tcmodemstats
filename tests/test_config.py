@@ -2,6 +2,7 @@
 
 import pytest
 
+import os
 import tcmodemstats
 
 class TestConfig(object):
@@ -12,5 +13,14 @@ class TestConfig(object):
 
     def test_custom_config_filename(self):
         config = tcmodemstats.Config("custom")
-        print("in testing: {}".format(config.config_filename))
         assert config.config_filename == "custom"
+
+    def test_key(self):
+        config = tcmodemstats.Config()
+        os.environ["pytest_tcmodemstats_testkey"] = "testvalue"
+        assert config.pytest_tcmodemstats_testkey == os.getenv("pytest_tcmodemstats_testkey")
+
+    def test_non_existent_key(self):
+        config = tcmodemstats.Config()
+        assert config.key == None
+
