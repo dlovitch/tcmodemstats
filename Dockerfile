@@ -9,5 +9,4 @@ COPY setup.py /srv/app/
 COPY tcmodemstats/ /srv/app/tcmodemstats
 RUN pip install --no-cache-dir .[datadog]
 
-WORKDIR /srv/app/tcmodemstats/
-CMD [ "python", "./modemstatsforwarder.py" ]
+CMD [ "tcmodemstatsforwarder" ]
