@@ -1,5 +1,5 @@
 FROM python:3
-MAINTAINER <dlovitch@gmail.com>
+MAINTAINER <1191170+dlovitch@users.noreply.github.com>
 RUN mkdir -p /srv/app/
 
 WORKDIR /srv/app/
